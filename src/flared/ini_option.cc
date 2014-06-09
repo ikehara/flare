@@ -58,7 +58,12 @@ ini_option::ini_option():
 		_storage_type(""),
 		_thread_pool_size(default_thread_pool_size),
 		_proxy_prior_netmask(default_proxy_prior_netmask),
-		_max_total_thread_queue(default_max_total_thread_queue) {
+		_max_total_thread_queue(default_max_total_thread_queue),
+		_cluster_replication(false),
+		_cluster_replication_server_name(""),
+		_cluster_replication_server_port(default_server_port),
+		_cluster_replication_concurrency(default_cluster_replication_concurrency),
+		_cluster_replication_sync(false) {
 	pthread_mutex_init(&this->_mutex_index_servers, NULL);
 }
 
@@ -316,6 +321,26 @@ int ini_option::load() {
 		if (opt_var_map.count("max-total-thread-queue")) {
 			this->_max_total_thread_queue = opt_var_map["max-total-thread-queue"].as<uint32_t>();
 		}
+
+		if (opt_var_map.count("cluster-replication")) {
+			this->_cluster_replication = true;
+		}
+
+		if (opt_var_map.count("cluster-replication-server-name")) {
+			this->_cluster_replication_server_name = opt_var_map["cluster-replication-server-name"].as<string>();
+		}
+
+		if (opt_var_map.count("cluster-replication-server-port")) {
+			this->_cluster_replication_server_port = opt_var_map["cluster-replication-server-port"].as<int>();
+		}
+
+		if (opt_var_map.count("cluster-replication-concurrency")) {
+			this->_cluster_replication_concurrency = opt_var_map["cluster-replication-concurrency"].as<int>();
+		}
+
+		if (opt_var_map.count("cluster-replication-sync")) {
+				this->_cluster_replication_sync = true;
+		}
 	} catch (int e) {
 		cout << option << endl;
 		return -1;
@@ -445,6 +470,29 @@ int ini_option::reload() {
 			this->_noreply_window_limit = opt_var_map["noreply-window-limit"].as<int>();
 		}
 
+		log_notice("  cluster_replication: %s -> %s", this->_cluster_replication ? "true" : "false", opt_var_map.count("cluster-replication") ? "true" : "false");
+		this->_cluster_replication = opt_var_map.count("cluster-replication") ? true : false;
+
+		if (opt_var_map.count("cluster-replication-server-name")) {
+			log_notice("  cluster_replication_server_name: %s -> %s", this->_cluster_replication_server_name.c_str(), opt_var_map["cluster-replication-server-name"].as<string>().c_str());
+			this->_cluster_replication_server_name = opt_var_map["cluster-replication-server-name"].as<string>();
+		}
+
+		if (opt_var_map.count("cluster-replication-server-port")) {
+			log_notice("  cluster_replication_server_port: %d -> %d", this->_cluster_replication_server_port, opt_var_map["cluster-replication-server-port"].as<int>());
+			this->_cluster_replication_server_port = opt_var_map["cluster-replication-server-port"].as<int>();
+		}
+
+		if (opt_var_map.count("cluster-replication-concurrency")) {
+			log_notice("  cluster_replication_concurrency: %d -> %d",
+					   this->_cluster_replication_concurrency,
+					   opt_var_map["cluster-replication-concurrency"].as<int>());
+			this->_cluster_replication_concurrency = opt_var_map["cluster-replication-concurrency"].as<int>();
+		}
+
+		log_notice("  cluster_replication_sync: %s -> %s", this->_cluster_replication_sync ? "true" : "false", opt_var_map.count("cluster-replication-sync") ? "true" : "false");
+		this->_cluster_replication_sync = opt_var_map.count("cluster-replication-sync") ? true : false;
+
 	} catch (int e) {
 		ostringstream ss;
 		ss << option << endl;
@@ -516,7 +564,12 @@ int ini_option::_setup_config_option(program_options::options_description& optio
 		("storage-type",						program_options::value<string>(),		"storage type (tch:tokyo cabinet hash database, tcb:tokyo cabinet b+tree database, kch:kyoto cabinet hash database)")
 		("thread-pool-size",				program_options::value<int>(),			"thread pool size (dynamic)")
 		("proxy-prior-netmask",			program_options::value<uint32_t>(),	"proxy prior netmask")
-		("max-total-thread-queue",	program_options::value<uint32_t>(),	"max thread queue length (dynamic)");
+		("max-total-thread-queue",	program_options::value<uint32_t>(),	"max thread queue length (dynamic)")
+		("cluster-replication",																								"enable cluster replication")
+		("cluster-replication-server-name",	program_options::value<string>(),	"destination server name to replicate over cluster")
+		("cluster-replication-server-port",	program_options::value<int>(),		"destination server port to replicate over cluster")
+		("cluster-replication-concurrency",	program_options::value<int>(),		"concurrency to replicate over cluster")
+		("cluster-replication-type",				program_options::value<int>(),		"type of the replication over cluster");
 
 	return 0;
 }

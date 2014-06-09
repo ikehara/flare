@@ -17,13 +17,16 @@ namespace flare {
  *	storage simple map class
  */
 class storage_simple_map : public storage {
+public:
+	int		_wait_iter;
 protected:
 	map<string, storage::entry>						_map;
 	map<string, storage::entry>::iterator	_it;
 
 public:
 	storage_simple_map(string data_dir, int mutex_slot_size, int header_cache_size):
-		storage(data_dir, mutex_slot_size, header_cache_size) {
+		storage(data_dir, mutex_slot_size, header_cache_size),
+		_wait_iter(-1) {
 		this->_it = this->_map.end();
 	};
 	virtual ~storage_simple_map() {
@@ -61,6 +64,9 @@ public:
 		return 0;
 	};
 	virtual iteration iter_next(string& key) {
+		if (this->_wait_iter > 0) {
+			usleep(_wait_iter);
+		}
 		if (this->_it != this->_map.end()) {
 			key = (*this->_it).first;
 			++this->_it;

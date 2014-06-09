@@ -62,11 +62,16 @@ private:
 	bool				_storage_large;
 	int					_storage_lmemb;
 	int					_storage_nmemb;
-	int32_t				_storage_dfunit;
+	int32_t			_storage_dfunit;
 	string			_storage_type;
 	int					_thread_pool_size;
 	uint32_t 		_proxy_prior_netmask;
 	uint32_t 		_max_total_thread_queue;
+	bool				_cluster_replication;
+	string			_cluster_replication_server_name;
+	int					_cluster_replication_server_port;
+	int					_cluster_replication_concurrency;
+	bool				_cluster_replication_sync;
 public:
 	static const int default_back_log = 30;
 	static const int default_index_server_port = 12120;
@@ -93,6 +98,7 @@ public:
 	static const int default_thread_pool_size = 5;
 	static const uint32_t default_proxy_prior_netmask = 0x00;
 	static const uint32_t default_max_total_thread_queue = 0;				// unlimited
+	static const uint32_t default_cluster_replication_concurrency = 1;
 
 	ini_option();
 	virtual ~ini_option();
@@ -147,6 +153,11 @@ public:
 	int get_thread_pool_size() { return this->_thread_pool_size; };
 	uint32_t get_proxy_prior_netmask() { return this->_proxy_prior_netmask; };
 	uint32_t get_max_total_thread_queue() { return this->_max_total_thread_queue; };
+	bool is_cluster_replication() { return this->_cluster_replication; }
+	string get_cluster_replication_server_name() { return this->_cluster_replication_server_name; };
+	int get_cluster_replication_server_port() { return this->_cluster_replication_server_port; }
+	int get_cluster_replication_concurrency() { return this->_cluster_replication_concurrency; };
+	bool get_cluster_replication_sync() { return this->_cluster_replication_sync; }
 
 private:
 	int _setup_cli_option(program_options::options_description& option);

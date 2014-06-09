@@ -9,6 +9,7 @@
  */
 #include "cluster.h"
 #include "connection_tcp.h"
+#include "handler_dump_replication.h"
 #include "handler_monitor.h"
 #include "handler_proxy.h"
 #include "handler_reconstruction.h"
@@ -20,6 +21,7 @@
 #include "op_shutdown.h"
 #include "op_proxy_read.h"
 #include "op_proxy_write.h"
+#include "queue_forward_query.h"
 #include "queue_node_sync.h"
 #include "queue_node_state.h"
 #include "queue_proxy_read.h"
@@ -86,6 +88,8 @@ cluster::~cluster() {
 
 	delete this->_key_resolver;
 	this->_key_resolver = NULL;
+
+	this->_proxy_event_listeners.clear();
 }
 // }}}
 
@@ -1255,6 +1259,18 @@ int cluster::shutdown_node() {
 }
 
 /**
+ *	[node] add proxy listener
+ *	# Do not add the cluster is setup.
+ *	# You must add all listeners before cluster::startup_node is called.
+ */
+int cluster::add_proxy_event_listener(shared_proxy_event_listener listener) {
+	if (find(this->_proxy_event_listeners.begin(), this->_proxy_event_listeners.end(), listener) == this->_proxy_event_listeners.end()) {
+		this->_proxy_event_listeners.push_back(listener);
+	}
+	return 0;
+}
+
+/**
  *	[node] pre proxy for reading ops (get, gets)
  *
  *	@todo fix performance issue
@@ -1351,6 +1367,12 @@ cluster::proxy_request cluster::pre_proxy_write(op_proxy_write* op, shared_queue
  *	[node] post proxy for writing ops
  */
 cluster::proxy_request cluster::post_proxy_write(op_proxy_write* op, bool sync) {
+	list<shared_proxy_event_listener>::iterator it = this->_proxy_event_listeners.begin();
+	for (list<shared_proxy_event_listener>::iterator it = this->_proxy_event_listeners.begin();
+			   it != this->_proxy_event_listeners.end(); it++) {
+		(*it)->on_post_proxy_write(op);
+	}
+
 	storage::entry& e = op->get_entry();
 
 	partition p, p_prepare;
@@ -1366,7 +1388,6 @@ cluster::proxy_request cluster::post_proxy_write(op_proxy_write* op, bool sync) 
 	if ((p.master.node_key == this->_node_key) || (op->is_proxy_request() && is_prepare && p_prepare.master.node_key == this->_node_key)) {
 		// fall through
 	} else {
-		// nothing to do
 		return proxy_request_complete;
 	}
 
