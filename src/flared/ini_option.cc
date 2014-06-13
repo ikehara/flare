@@ -62,7 +62,7 @@ ini_option::ini_option():
 		_cluster_replication(false),
 		_cluster_replication_server_name(""),
 		_cluster_replication_server_port(default_server_port),
-		_cluster_replication_concurrency(default_cluster_replication_concurrency),
+		_cluster_replication_concurrency(default_proxy_concurrency),
 		_cluster_replication_sync(false) {
 	pthread_mutex_init(&this->_mutex_index_servers, NULL);
 }
@@ -336,6 +336,8 @@ int ini_option::load() {
 
 		if (opt_var_map.count("cluster-replication-concurrency")) {
 			this->_cluster_replication_concurrency = opt_var_map["cluster-replication-concurrency"].as<int>();
+		} else {
+			this->_cluster_replication_concurrency = this->_proxy_concurrency;
 		}
 
 		if (opt_var_map.count("cluster-replication-sync")) {
@@ -569,7 +571,7 @@ int ini_option::_setup_config_option(program_options::options_description& optio
 		("cluster-replication-server-name",	program_options::value<string>(),	"destination server name to replicate over cluster")
 		("cluster-replication-server-port",	program_options::value<int>(),		"destination server port to replicate over cluster")
 		("cluster-replication-concurrency",	program_options::value<int>(),		"concurrency to replicate over cluster")
-		("cluster-replication-type",				program_options::value<int>(),		"type of the replication over cluster");
+		("cluster-replication-sync",				program_options::value<int>(),		"type of the replication over cluster");
 
 	return 0;
 }

@@ -78,6 +78,7 @@ int handler_dump_replication::run() {
 	while ((i = this->_storage->iter_next(e.key)) == storage::iteration_continue
 			&& this->_thread && !this->_thread->is_shutdown_request()) {
 		if (partition >= 0) {
+			partition_size = this->_cluster->get_node_partition_map_size();
 			int key_hash_value = e.get_key_hash_value(this->_cluster->get_key_hash_algorithm());
 			int p = kr->resolve(key_hash_value, partition_size);
 			if (p != partition) {

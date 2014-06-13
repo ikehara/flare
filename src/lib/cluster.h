@@ -192,7 +192,8 @@ protected:
 	uint32_t							_proxy_prior_netmask;
 	uint32_t							_max_total_thread_queue;
 
-	list<shared_proxy_event_listener>	_proxy_event_listeners;
+	list<shared_proxy_event_listener>			_proxy_event_listeners;
+	vector<shared_proxy_event_listener>		_fixed_proxy_event_listeners;
 
 public:
 	cluster(thread_pool* tp, string server_name, int server_port);

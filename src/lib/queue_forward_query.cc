@@ -43,7 +43,9 @@ queue_forward_query::~queue_forward_query() {
 int queue_forward_query::run(shared_connection c) {
 #ifdef DEBUG
 	if (const connection_tcp* ctp = dynamic_cast<const connection_tcp*>(c.get())) {
-		log_debug("forwarding query (host=%s, port=%d, op=%s, key=%s, version=%u)", ctp->get_host().c_str(), ctp->get_port(), this->_op_ident.c_str(), this->_entry.key.c_str(), this->_entry.version);
+		log_debug("forwarding query (host=%s, port=%d, op=%s, key=%s, version=%u)",
+				   ctp->get_host().c_str(), ctp->get_port(), this->_op_ident.c_str(),
+				   this->_entry.key.c_str(), this->_entry.version);
 	}
 #endif
 
@@ -60,7 +62,7 @@ int queue_forward_query::run(shared_connection c) {
 		if (c->is_available() == false) {
 #ifdef DEBUG
 			if (const connection_tcp* ctp = dynamic_cast<const connection_tcp*>(c.get())) {
-				log_debug("reconnecting (host%s, port%d)", ctp->get_host().c_str(), ctp->get_port());
+				log_debug("reconnecting (host=%s, port=%d)", ctp->get_host().c_str(), ctp->get_port());
 			}
 #endif
 			c->open();
@@ -68,28 +70,18 @@ int queue_forward_query::run(shared_connection c) {
 		retry--;
 	}
 	if (retry <= 0) {
+		log_err("failed forwarding query due to unavailable connection (key=%s, version=%u)",
+				   this->_entry.key.c_str(), this->_entry.version);
 		delete p;
 		return -1;
 	}
 
 	this->_success = true;
 	this->_result = p->get_result();
+	this->_result_message = p->get_result_message();
+	delete p;
 
 	log_debug("result: %s:%d", p->get_ident().c_str(), this->_result);
-	if ((p->get_ident() == "incr" || p->get_ident() == "decr") && this->_result == op::result_stored) {
-		log_debug("available: %d", this->_entry.is_data_available());
-		if (this->_entry.is_data_available()) {
-			char buf[BUFSIZ];
-			memcpy(buf, this->_entry.data.get(), this->_entry.size);
-			snprintf(buf+this->_entry.size, sizeof(buf)-this->_entry.size, "%s", line_delimiter);
-			this->_result_message = buf;
-		} else {
-			this->_result_message = p->get_result_message();
-		}
-	} else {
-		this->_result_message = p->get_result_message();
-	}
-	delete p;
 
 	return 0;
 }
@@ -107,12 +99,12 @@ op_proxy_write* queue_forward_query::_get_op(string op_ident, shared_connection 
 			|| op_ident == "append"
 			|| op_ident == "prepend"
 			|| op_ident == "incr"
-			|| op_ident == "decr") {
+			|| op_ident == "decr"
+			|| op_ident == "touch"
+			|| op_ident == "gat") {
 		return new op_set(c, NULL, NULL);
 	} else if (op_ident == "delete") {
 		return new op_delete(c, NULL, NULL);
-	} else if (op_ident == "touch" || op_ident == "gat") {
-		return new op_touch(c, NULL, NULL);
 	}
 	log_warning("unknown op (ident=%s)", op_ident.c_str());
 

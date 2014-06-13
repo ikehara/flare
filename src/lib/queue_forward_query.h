@@ -44,7 +44,7 @@ public:
 	string get_op_ident() { return this->_op_ident; };
 	storage::entry& get_entry() { return this->_entry; };
 
-private:
+protected:
 	op_proxy_write* _get_op(string op_ident, shared_connection c);
 };
 

@@ -155,6 +155,9 @@ int cluster_replication::on_post_proxy_write(op_proxy_write* op) {
 		}
 		return -1;
 	}
+	if (this->_sync) {
+		q->sync();
+	}
 
 	return 0;
 }

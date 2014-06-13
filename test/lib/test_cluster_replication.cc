@@ -10,6 +10,8 @@
 #include "cluster_replication.h"
 #include "key_resolver_modular.h"
 #include "server.h"
+#include "thread.h"
+#include "thread_handler.h"
 #include "thread_pool.h"
 
 #include "storage_simple_map.h"
@@ -17,11 +19,32 @@
 
 #include <cppcutter.h>
 
-
 using namespace std;
 using namespace gree::flare;
 
 namespace test_cluster_replication {
+	class handler_async_response : public thread_handler {
+		private:
+		server* _server;
+		public:
+		handler_async_response(shared_thread t, server* s):
+			thread_handler(t) {
+			this->_server = s;
+		}
+
+		~handler_async_response() {
+		}
+
+		virtual int run() {
+			sleep(1);
+			if (this->_server) {
+				vector<shared_connection_tcp> cs = this->_server->wait();
+				cs[0]->writeline("STORED");
+			}
+			return 0;
+		}
+	};
+
 	struct mock_cluster : public cluster {
 		using cluster::_node_key;
 		using cluster::_node_map;
@@ -297,7 +320,7 @@ namespace test_cluster_replication {
 		cut_assert_equal_int(-1, cl_repl.on_post_proxy_write(&op));
 	}
 
-	void test_on_post_proxy_write_with_single_concurrency_async() {
+	void test_on_post_proxy_write_with_async() {
 		// prepare
 		server* s = create_server(port);
 		thread_pool tp(1);
@@ -321,82 +344,28 @@ namespace test_cluster_replication {
 		delete s;
 	}
 
-	void test_on_post_proxy_write_with_single_concurrency_sync() {
+	void test_on_post_proxy_write_with_sync() {
 		// prepare
 		server* s = create_server(port);
-		thread_pool tp(1);
+		thread_pool tp(2);
 		mock_cluster cl(NULL, "localhost", port);
 		storage_simple_map st("", 0, 0);
 		cluster_replication cl_repl(&tp);
 		cl_repl.set_sync(true);
 		cut_assert_equal_int(0, cl_repl.start("localhost", port, 1, &st, &cl));
-		sleep(1);  // waiting for connection establishment
+		sleep(1);
 		check(cl_repl, tp, true, "localhost", port, 1, false, true);
 
 		// execute
 		shared_connection c(new connection_sstream(" TEST 0 0 5\r\nVALUE\r\n"));
-		op_set op(c, &cl, &st);
+		op_set op(c, NULL, NULL);
+		shared_thread t = tp.get(thread_pool::thread_type_request);
+		handler_async_response* h = new handler_async_response(t, s);
+		t->trigger(h);
 		cut_assert_equal_int(0, cl_repl.on_post_proxy_write(&op));
-		sleep(1);
-		vector<shared_connection_tcp> cs = s->wait();
-		cs[0]->writeline("STORED");
 
 		// assert
 		check(cl_repl, tp, true, "localhost", port, 1, false, true);
-		delete s;
-	}
-
-	void test_on_post_proxy_write_with_multiple_concurrency_async() {
-		// prepare
-		server* s = create_server(port);
-		thread_pool tp(3);
-		mock_cluster cl(NULL, "localhost", port);
-		storage_simple_map st("", 0, 0);
-		cluster_replication cl_repl(&tp);
-		cut_assert_equal_int(0, cl_repl.start("localhost", port, 3, &st, &cl));
-		sleep(1);  // waiting for connection establishment
-		check(cl_repl, tp, true, "localhost", port, 3, false);
-
-		// execute
-		for (int i = 0; i < 3; i++) {
-			shared_connection c(new connection_sstream(" TEST 0 0 5\r\nVALUE\r\n"));
-			op_set op(c, &cl, &st);
-			cut_assert_equal_int(0, cl_repl.on_post_proxy_write(&op));
-			sleep(1);
-			vector<shared_connection_tcp> cs = s->wait();
-			cs[0]->writeline("STORED");
-		}
-
-		// assert
-		check(cl_repl, tp, true, "localhost", port, 3, false);
-		sleep(3);
-		delete s;
-	}
-
-	void test_on_post_proxy_write_with_multiple_concurrency_sync() {
-		// prepare
-		server* s = create_server(port);
-		thread_pool tp(3);
-		mock_cluster cl(NULL, "localhost", port);
-		storage_simple_map st("", 0, 0);
-		cluster_replication cl_repl(&tp);
-		cl_repl.set_sync(true);
-		cut_assert_equal_int(0, cl_repl.start("localhost", port, 3, &st, &cl));
-		sleep(1);  // waiting for connection establishment
-		check(cl_repl, tp, true, "localhost", port, 3, false, true);
-
-		// execute
-		for (int i = 0; i < 3; i++) {
-			shared_connection c(new connection_sstream(" TEST 0 0 5\r\nVALUE\r\n"));
-			op_set op(c, &cl, &st);
-			cut_assert_equal_int(0, cl_repl.on_post_proxy_write(&op));
-			sleep(1);
-			vector<shared_connection_tcp> cs = s->wait();
-			cs[0]->writeline("STORED");
-		}
-
-		// assert
-		check(cl_repl, tp, true, "localhost", port, 3, false, true);
 		delete s;
 	}
 

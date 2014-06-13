@@ -98,7 +98,6 @@ public:
 	static const int default_thread_pool_size = 5;
 	static const uint32_t default_proxy_prior_netmask = 0x00;
 	static const uint32_t default_max_total_thread_queue = 0;				// unlimited
-	static const uint32_t default_cluster_replication_concurrency = 1;
 
 	ini_option();
 	virtual ~ini_option();

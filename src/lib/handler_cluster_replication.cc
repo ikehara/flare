@@ -69,6 +69,7 @@ int handler_cluster_replication::run() {
 		if (this->_thread->is_shutdown_request()) {
 			log_info("thread shutdown request -> breaking loop", 0);
 			this->_thread->set_state("shutdown");
+			q->sync_unref();
 			break;
 		}
 
@@ -86,7 +87,12 @@ int handler_cluster_replication::_process_queue(shared_thread_queue q) {
 	this->_thread->set_op(q->get_ident());
 
 	shared_queue_forward_query r = dynamic_pointer_cast<queue_forward_query, thread_queue>(q);
-	return r->run(this->_connection);
+	if (r.get()) {
+		return r->run(this->_connection);
+	} else {
+		log_err("invalid type of queue is enqueued", 0);
+		return -1;
+	}
 }
 // }}}
 
