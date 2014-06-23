@@ -302,7 +302,7 @@ int cluster::startup_node(const vector<index_server>& index_servers, uint32_t pr
 		return -1;
 	}
 
-	vector<shared_proxy_event_listener> listeners(this->_proxy_event_listeners.size());
+	vector<shared_proxy_event_listener> listeners;
 	for (list<shared_proxy_event_listener>::iterator it = this->_proxy_event_listeners.begin();
 			   it != this->_proxy_event_listeners.end(); it++) {
 		listeners.push_back(*it);

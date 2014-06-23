@@ -571,7 +571,7 @@ int ini_option::_setup_config_option(program_options::options_description& optio
 		("cluster-replication-server-name",	program_options::value<string>(),	"destination server name to replicate over cluster")
 		("cluster-replication-server-port",	program_options::value<int>(),		"destination server port to replicate over cluster")
 		("cluster-replication-concurrency",	program_options::value<int>(),		"concurrency to replicate over cluster")
-		("cluster-replication-sync",				program_options::value<int>(),		"type of the replication over cluster");
+		("cluster-replication-sync",																					"type of the replication over cluster");
 
 	return 0;
 }
