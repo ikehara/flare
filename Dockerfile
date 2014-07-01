@@ -1,5 +1,5 @@
-FROM debian:squeeze
-RUN apt-get update
+FROM ubuntu:14.04
+RUN apt-get -y update
 RUN apt-get -y --force-yes install \
         autoconf \
         automake \
@@ -11,9 +11,9 @@ RUN apt-get -y --force-yes install \
         zlib1g-dev \
         libncursesw5 \
         git \
-#        libhashkit-dev \
+        libhashkit-dev \
         libtokyocabinet-dev \
-#        libkyotocabinet-dev \
+        libkyotocabinet-dev \
         uuid-dev \
         libsqlite3-dev \
         libncurses5-dev \
@@ -23,4 +23,4 @@ RUN apt-get -y --force-yes install \
     apt-get clean
 ADD . /tmp
 RUN cd /tmp && ./autogen.sh && ./configure && make && make install
-ENTRYPOINT /usr/local/bin/flare
+ENTRYPOINT /usr/local/bin/flared
