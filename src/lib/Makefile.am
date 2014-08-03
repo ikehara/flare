@@ -11,6 +11,14 @@ noinst_LTLIBRARIES = libflare.la
 
 DEFS = -Wall $(FLARE_CXXFLAGS)
 
+AM_CXXFLAGS = $(COVERAGE_CFLAGS)
+AM_CFLAGS = $(COVERAGE_CFLAGS)
+AM_LDFLAGS = -no-undefined
+
+if ENABLE_COVERAGE
+AM_LDFLAGS += -lgcov
+endif
+
 libflare_la_SOURCES = \
 	app.h app.cc \
 	binary_header.h \

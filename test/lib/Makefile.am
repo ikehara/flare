@@ -65,7 +65,12 @@ AM_LDFLAGS =			\
 	-module				\
 	-rpath $(libdir)	\
 	-avoid-version		\
+	-no-undefined		\
 	$(FLARE_LDFLAGS)
+
+if ENABLE_COVERAGE
+AM_LDFLAGS += -lgcov
+endif
 
 LIBS =									\
 	$(top_builddir)/src/lib/libflare.la	\
@@ -125,3 +130,6 @@ if ENABLE_ZOOKEEPER
 test_zookeeper_coordinator_la_SOURCES	= test_zookeeper_coordinator.cc
 test_zookeeper_lock_la_SOURCES		= test_zookeeper_lock.cc
 endif
+
+echo-cutter:
+	@echo $(CUTTER)

@@ -28,9 +28,17 @@ before_install:
   - sudo apt-get install libboost-program-options-dev libboost-regex-dev libboost-serialization-dev libboost-thread-dev
   - sudo apt-get install uuid-dev
   - sudo apt-get install cutter-testing-framework
+  - sudo apt-get install lcov
+  - gem install coveralls-lcov
 
 before_script:
   - travis_retry ./autogen.sh
-  - travis_retry ./configure
+  - travis_retry ./configure --enable-coverage
 
-script: make && make test && make check
+script:
+  - make
+  - make coverage
+
+after_success:
+  - lcov --compat-libtool --directory . --capture --output-file coverage.info
+  - coveralls-lcov coverage.info

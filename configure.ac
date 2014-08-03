@@ -25,6 +25,8 @@ AS_IF([test "x$enable_valgrind_checks" != "xno"],
 AS_IF([test "x$ac_cv_path_VALGRIND" == "x" -a "x$enable_valgrind_checks" == "xyes"], [AC_MSG_ERROR(valgrind-checks requested but valgrind not found)])
 AC_CHECK_HEADERS([valgrind.h valgrind/valgrind.h])
 
+# Coverage
+AC_CHECK_COVERAGE
 
 # Checks for libraries.
 
