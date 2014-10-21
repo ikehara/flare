@@ -30,12 +30,14 @@ cluster_replication::cluster_replication(thread_pool* tp):
 		_concurrency(0),
 		_started(false),
 		_sync (false) {
+	pthread_mutex_init(&this->_mutex_started, NULL);
 }
 
 /**
  *	dtor for cluster_replicationplication
  */
 cluster_replication::~cluster_replication() {
+	this->stop();
 }
 // }}}
 
@@ -48,6 +50,7 @@ cluster_replication::~cluster_replication() {
  */
 int cluster_replication::start(string server_name, int server_port, int concurrency, storage* st, cluster* cl) {
 	log_notice("start cluster replication (dest=%s:%d, concurrency=%d)", server_name.c_str(), server_port, concurrency);
+
 	if (this->_started) {
 		log_debug("cluster replication is already started", 0);
 		return -1;
@@ -63,15 +66,15 @@ int cluster_replication::start(string server_name, int server_port, int concurre
 		handler_cluster_replication* h = new handler_cluster_replication(t, server_name, server_port);
 		t->trigger(h);
 	}
-
-	this->_start_dump_replication(server_name, server_port, st, cl);
+	pthread_mutex_lock(&this->_mutex_started);
+	this->_started = true;
+	pthread_mutex_unlock(&this->_mutex_started);
 
 	this->_server_name = server_name;
 	this->_server_port = server_port;
 	this->_concurrency = concurrency;
-	this->_key_hash_algorithm = cl->get_proxy_hash_algorithm();
 
-	this->_started = true;
+	this->_start_dump_replication(server_name, server_port, st, cl);
 
 	return 0;
 }
@@ -82,17 +85,19 @@ int cluster_replication::start(string server_name, int server_port, int concurre
 int cluster_replication::stop() {
 	log_notice("stop cluster replication", 0);
 
+	pthread_mutex_lock(&this->_mutex_started);
+	this->_started = false;
+	pthread_mutex_unlock(&this->_mutex_started);
+
 	this->_server_name = "";
 	this->_server_port = 0;
 	this->_concurrency = 0;
-
-	this->_started = false;
 
 	thread_pool::local_map m = this->_thread_pool->get_active(thread_pool::thread_type_cluster_replication);
 	for (thread_pool::local_map::iterator it = m.begin(); it != m.end(); it++) {
 		log_debug("killing cluster replication thread", 0);
 		it->second->set_state("killed");
-		it->second->shutdown(true, true);
+		it->second->shutdown(true, false);
 	}
 
 	this->_stop_dump_replication();
@@ -120,9 +125,12 @@ int cluster_replication::on_pre_proxy_write(op_proxy_write* op) {
  *	implementation of on_post_proxy_write event handling.
  */
 int cluster_replication::on_post_proxy_write(op_proxy_write* op) {
+	pthread_mutex_lock(&this->_mutex_started);
 	if (!this->_started) {
+		pthread_mutex_unlock(&this->_mutex_started);
 		return -1;
 	}
+	pthread_mutex_unlock(&this->_mutex_started);
 
 	storage::entry& e = op->get_entry();
 	shared_thread_queue q(new queue_forward_query(e, op->get_ident()));
@@ -134,7 +142,7 @@ int cluster_replication::on_post_proxy_write(op_proxy_write* op) {
 	}
 
 	shared_thread t;
-	int key_hash_value = e.get_key_hash_value(this->_key_hash_algorithm);
+	int key_hash_value = e.get_key_hash_value(storage::hash_algorithm_murmur);
 	int index = key_hash_value % m.size();
 	int i = 0;
 	for (thread_pool::local_map::iterator it = m.begin(); it != m.end(); it++) {
@@ -195,7 +203,7 @@ int cluster_replication::_stop_dump_replication() {
 	for (thread_pool::local_map::iterator it = m.begin(); it != m.end(); it++) {
 		log_debug("killing dump replication thread", 0);
 		it->second->set_state("killed");
-		it->second->shutdown(true, true);
+		it->second->shutdown(true, false);
 	}
 	return 0;
 }

@@ -238,11 +238,12 @@ int flared::startup(int argc, char **argv) {
 	// cluster replication
 	this->_cluster_replication->set_sync(ini_option_object().get_cluster_replication_sync());
 	if (ini_option_object().is_cluster_replication()) {
-		this->_cluster_replication->start(
-				   ini_option_object().get_cluster_replication_server_name(),
-				   ini_option_object().get_cluster_replication_server_port(),
-				   ini_option_object().get_cluster_replication_concurrency(),
-				   this->_storage, this->_cluster);
+		string n = ini_option_object().get_cluster_replication_server_name();
+		int p = ini_option_object().get_cluster_replication_server_port();
+		int c = ini_option_object().get_cluster_replication_concurrency();
+		if (this->_cluster_replication->start(n, p, c, this->_storage, this->_cluster) < 0) {
+			return -1;
+		}
 	}
 
 	if (this->_set_pid() < 0) {
@@ -361,8 +362,7 @@ int flared::reload() {
 
 		if (this->_cluster_replication->is_started()
 				&& (cl_repl_server_name != this->_cluster_replication->get_server_name()
-						|| cl_repl_server_port != this->_cluster_replication->get_server_port()
-						|| cl_repl_concurrency != this->_cluster_replication->get_concurrency())) {
+						|| cl_repl_server_port != this->_cluster_replication->get_server_port())) {
 			this->_cluster_replication->stop();
 		}
 

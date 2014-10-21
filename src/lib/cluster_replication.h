@@ -8,6 +8,8 @@
 #ifndef	CLUSTER_REPLICATION_H
 #define	CLUSTER_REPLICATION_H
 
+#include <pthread.h>
+
 #include "cluster.h"
 #include "proxy_event_listener.h"
 #include "storage.h"
@@ -17,17 +19,17 @@ namespace gree {
 namespace flare {
 
 /**
- *	class handling clsuter replication
- */
+ *	class to handle replication over cluster
+ **/
 class cluster_replication : public proxy_event_listener {
 private:
-	thread_pool*		_thread_pool;
-	string					_server_name;
-	int							_server_port;
-	int							_concurrency;
-	bool						_started;
-	bool						_sync;
-	storage::hash_algorithm		_key_hash_algorithm;
+	thread_pool*			_thread_pool;
+	string						_server_name;
+	int								_server_port;
+	int								_concurrency;
+	bool							_started;
+	bool							_sync;
+	pthread_mutex_t		_mutex_started;
 
 public:
 	cluster_replication(thread_pool* tp);

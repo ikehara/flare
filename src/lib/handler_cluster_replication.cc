@@ -42,7 +42,8 @@ int handler_cluster_replication::run() {
 	this->_thread->set_peer(this->_replication_server_name, this->_replication_server_port);
 	this->_thread->set_state("connect");
 
-	shared_connection c(new connection_tcp(this->_replication_server_name, this->_replication_server_port));
+	shared_connection c(new connection_tcp(
+			   this->_replication_server_name, this->_replication_server_port));
 	this->_connection = c;
 	if (c->open() < 0) {
 		log_err("failed to connect to cluster replication destination server (name=%s, port=%d)",

@@ -27,8 +27,8 @@ handler_dump_replication::handler_dump_replication(shared_thread t, cluster* cl,
 		_storage(st),
 		_replication_server_name(server_name),
 		_replication_server_port(server_port) {
-		this->_prior_tv.tv_sec = 0;
-		this->_prior_tv.tv_usec = 0;
+	this->_prior_tv.tv_sec = 0;
+	this->_prior_tv.tv_usec = 0;
 }
 
 /**
@@ -46,10 +46,12 @@ int handler_dump_replication::run() {
 	this->_thread->set_peer(this->_replication_server_name, this->_replication_server_port);
 	this->_thread->set_state("connect");
 
-	shared_connection c(new connection_tcp(this->_replication_server_name, this->_replication_server_port));
+	shared_connection c(new connection_tcp(
+			   this->_replication_server_name, this->_replication_server_port));
 	this->_connection = c;
 	if (c->open() < 0) {
-		log_err("failed to connect to cluster replication server (name=%s, port=%d)", this->_replication_server_name.c_str(), this->_replication_server_port);
+		log_err("failed to connect to cluster replication server (name=%s, port=%d)",
+				   this->_replication_server_name.c_str(), this->_replication_server_port);
 		return -1;
 	}
 
@@ -60,7 +62,7 @@ int handler_dump_replication::run() {
 	this->_prior_tv.tv_usec = 0;
 
 	if (this->_storage->iter_begin() < 0) {
-		log_debug("database busy", 0);
+		log_err("database busy", 0);
 		return -1;
 	}
 
@@ -82,17 +84,19 @@ int handler_dump_replication::run() {
 			int key_hash_value = e.get_key_hash_value(this->_cluster->get_key_hash_algorithm());
 			int p = kr->resolve(key_hash_value, partition_size);
 			if (p != partition) {
-				log_debug("skipping entry (key=%s, key_hash_value=%d, mod=%d, partition=%d, partition_size=%d)", e.key.c_str(), key_hash_value, p, partition, partition_size);
+				log_debug("skipping entry (key=%s, key_hash_value=%d, mod=%d, partition=%d, partition_size=%d)",
+						   e.key.c_str(), key_hash_value, p, partition, partition_size);
 				continue;
 			}
 		}
 
 		storage::result r;
 		if (this->_storage->get(e, r) < 0) {
-			log_err("skipping entry [get() error] (key=%s)", e.key.c_str());
-			continue;
-		} else if (r == storage::result_not_found) {
-			log_info("skipping entry [key not found (perhaps expired)] (key=%s)", e.key.c_str());
+			if (r == storage::result_not_found) {
+				log_info("skipping entry [key not found (perhaps expired)] (key=%s)", e.key.c_str());
+			} else {
+				log_err("skipping entry [get() error] (key=%s)", e.key.c_str());
+			}
 			continue;
 		}
 
@@ -118,7 +122,7 @@ int handler_dump_replication::run() {
 
 	this->_storage->iter_end();
 	log_notice("dump replication completed (dest=%s:%d, partition=%d, partition_size=%d, interval=%d, bwlimit=%d)",
-			    this->_replication_server_name.c_str(), this->_replication_server_port, partition, partition_size, wait, bwlimit);
+			   this->_replication_server_name.c_str(), this->_replication_server_port, partition, partition_size, wait, bwlimit);
 
 	return 0;
 }

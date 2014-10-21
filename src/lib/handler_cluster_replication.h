@@ -20,7 +20,7 @@ namespace gree {
 namespace flare {
 
 /**
- *	inter-cluster replication thread handler class
+ *	cluster replication thread handler class
  */
 class handler_cluster_replication : public thread_handler {
 protected:

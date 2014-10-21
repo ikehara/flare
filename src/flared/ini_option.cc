@@ -485,13 +485,6 @@ int ini_option::reload() {
 			this->_cluster_replication_server_port = opt_var_map["cluster-replication-server-port"].as<int>();
 		}
 
-		if (opt_var_map.count("cluster-replication-concurrency")) {
-			log_notice("  cluster_replication_concurrency: %d -> %d",
-					   this->_cluster_replication_concurrency,
-					   opt_var_map["cluster-replication-concurrency"].as<int>());
-			this->_cluster_replication_concurrency = opt_var_map["cluster-replication-concurrency"].as<int>();
-		}
-
 		log_notice("  cluster_replication_sync: %s -> %s", this->_cluster_replication_sync ? "true" : "false", opt_var_map.count("cluster-replication-sync") ? "true" : "false");
 		this->_cluster_replication_sync = opt_var_map.count("cluster-replication-sync") ? true : false;
 
@@ -568,8 +561,8 @@ int ini_option::_setup_config_option(program_options::options_description& optio
 		("proxy-prior-netmask",			program_options::value<uint32_t>(),	"proxy prior netmask")
 		("max-total-thread-queue",	program_options::value<uint32_t>(),	"max thread queue length (dynamic)")
 		("cluster-replication",																								"enable cluster replication")
-		("cluster-replication-server-name",	program_options::value<string>(),	"destination server name to replicate over cluster")
-		("cluster-replication-server-port",	program_options::value<int>(),		"destination server port to replicate over cluster")
+		("cluster-replication-server-name",	program_options::value<string>(),	"destination server name to replicate over cluster (dynamic)")
+		("cluster-replication-server-port",	program_options::value<int>(),		"destination server port to replicate over cluster (dynamic)")
 		("cluster-replication-concurrency",	program_options::value<int>(),		"concurrency to replicate over cluster")
 		("cluster-replication-sync",																					"type of the replication over cluster");
 
