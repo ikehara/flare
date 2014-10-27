@@ -115,15 +115,20 @@ int handler_dump_replication::run() {
 			elapsed_usec = this->_sleep_for_bwlimit(e.key.size(), bwlimit);
 		}
 		if (wait > 0 && wait-elapsed_usec > 0) {
-			log_debug("wait for %d usec",wait);
+			log_debug("wait for %d usec", wait);
 			usleep(wait-elapsed_usec);
 		}
 	}
 
 	this->_storage->iter_end();
-	log_notice("dump replication completed (dest=%s:%d, partition=%d, partition_size=%d, interval=%d, bwlimit=%d)",
-			   this->_replication_server_name.c_str(), this->_replication_server_port, partition, partition_size, wait, bwlimit);
-
+	if (!this->_thread->is_shutdown_request()) {
+		log_notice("dump replication completed (dest=%s:%d, partition=%d, partition_size=%d, interval=%d, bwlimit=%d)",
+				   this->_replication_server_name.c_str(), this->_replication_server_port, partition, partition_size, wait, bwlimit);
+	} else {
+		this->_thread->set_state("shutdown");
+		log_warning("dump replication interruptted (dest=%s:%d, partition=%d, partition_size=%d, interval=%d, bwlimit=%d)",
+				   this->_replication_server_name.c_str(), this->_replication_server_port, partition, partition_size, wait, bwlimit);
+	}
 	return 0;
 }
 // }}}

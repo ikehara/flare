@@ -56,6 +56,12 @@ int cluster_replication::start(string server_name, int server_port, int concurre
 		return -1;
 	}
 
+	cluster::node n = cl->get_node(cl->get_server_name(), cl->get_server_port());
+	if (n.node_role == cluster::role_proxy) {
+		log_warning("unavailable to start cluster replication becuase this node is proxy node", 0);
+		return -1;
+	}
+
 	if (concurrency <= 0) {
 		log_warning("concurrency is not valid, concurrency=%d", concurrency);
 		return -1;
@@ -180,17 +186,9 @@ int cluster_replication::on_post_proxy_write(op_proxy_write* op) {
  */
 int cluster_replication::_start_dump_replication(string server_name, int server_port, storage* st, cluster* cl) {
 	log_notice("start to replicate the dump of storage", 0);
-	cluster::node n = cl->get_node(cl->get_server_name(), cl->get_server_port());
-
-	if (n.node_role == cluster::role_proxy) {
-		log_notice("skip the dump replication because this is proxy node", 0);
-		return -1;
-	}
-
 	shared_thread t = this->_thread_pool->get(thread_pool::thread_type_dump_replication);
 	handler_dump_replication* h = new handler_dump_replication(t, cl, st, server_name, server_port);
 	t->trigger(h);
-
 	return 0;
 }
 
