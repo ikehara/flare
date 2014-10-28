@@ -26,32 +26,40 @@ using namespace gree::flare;
 
 namespace test_cluster_replication {
 	class handler_async_response : public thread_handler {
+		public:
+			vector<string>		requests;
+			vector<string>		values;
 		private:
-			server*		_server;
-			bool			_stop;
+			server*						_server;
 		public:
 			handler_async_response(shared_thread t, server* s):
 					thread_handler(t) {
 				this->_server = s;
-				this->_stop = false;
 			}
 
 			~handler_async_response() {
 			}
 
 			virtual int run() {
-				while (!this->_stop) {
+				sleep(1);
+				while (!this->_thread->is_shutdown_request()) {
 					vector<shared_connection_tcp> cs = this->_server->wait();
-					for (int i = 0; i < cs.size(); i++) {
-						cs[i]->writeline("STORED");
+					if (cs.size() > 0) {
+						char *p, *q;
+						int len = cs[0]->readline(&p);
+						if (len > 0) {
+							cs[0]->readline(&q);
+							cs[0]->writeline("STORED");
+							this->requests.push_back(string(p));
+							this->values.push_back(string(q));
+							delete[] p;
+							delete[] q;
+						}
+					} else {
+						break;
 					}
-					usleep(50 * 1000);
 				}
 				return 0;
-			}
-
-			void stop() {
-				this->_stop = true;
 			}
 	};
 
@@ -111,6 +119,23 @@ namespace test_cluster_replication {
 			log_err("sigaction for %d failed: %s (%d)", SIGUSR1, util::strerror(errno), errno);
 			return;
 		}
+	}
+
+	void prepare_storage(int item_num, int version) {
+		for (int i = 0; i < item_num; i++) {
+			string key = "key" + boost::lexical_cast<string>(i);
+			string data = "VALUE";
+			st->set_helper(key, data.c_str(), 0, version);
+		}
+	}
+
+	storage::entry get_entry(string firstline, storage::parse_type type, string value) {
+		storage::entry e;
+		e.parse(firstline.c_str(), type);
+		shared_byte data(new uint8_t[e.size]);
+		memcpy(data.get(), value.c_str(), e.size);
+		e.data = data;
+		return e;
 	}
 
 	void assert_variable(string server_name, int server_port, int concurrency, bool sync = false) {
@@ -207,6 +232,34 @@ namespace test_cluster_replication {
 		// assert
 		assert_variable("", 0, 0);
 		assert_state(false, false);
+	}
+
+	void test_start_success_with_dump() {
+		// prepare
+		s->listen(port);
+		cluster::node master = cl->set_node("localhost", port, cluster::role_master, cluster::state_active);
+		cl->set_partition(0, master);
+		prepare_storage(3, 1);
+
+		// execute
+		cut_assert_equal_int(0, cl_repl->start("localhost", port, 3, st, cl));
+		sleep(1);
+		assert_variable("localhost", port, 3);
+		assert_state(true, true);
+
+		cs = s->wait();
+		for (int i = 0; i < 3; i++) {
+			sleep(1);
+			char *p, *q;
+			cs[0]->readline(&p);
+			cs[0]->readline(&q);
+			cs[0]->writeline("STORED");
+			string req = "set key" + boost::lexical_cast<string>(i) + " 0 0 5 1\n";
+			cut_assert_equal_string(req.c_str(), p);
+			cut_assert_equal_string("VALUE\n", q);
+		}
+		sleep(1);
+		assert_state(true, false);
 	}
 
 	void test_start_failure_with_no_concurrency() {
@@ -335,24 +388,37 @@ namespace test_cluster_replication {
 		assert_variable("localhost", port, 1);
 		assert_state(true, false);
 
-		shared_connection c(new connection_sstream(" key 0 0 5 3\r\nVALUE\r\n"));
-		mock_op_proxy_write op(c, cl, st);
-		op.parse();
-
-		// execute
+		// response asynchronously because it's failed to flush response
+		// to connection stream on this thread.
 		shared_thread t = tp->get(thread_pool::thread_type_request);
 		handler_async_response* h = new handler_async_response(t, s);
 		t->trigger(h);
-		cut_assert_equal_int(0, cl_repl->on_post_proxy_write(&op));
-		assert_queue_size(1);
-		sleep(2);
-		h->stop();
+
+		// execute
+		for (int i = 0; i < 5; i++) {
+			shared_connection c(new connection_sstream("dummy"));
+			mock_op_proxy_write op(c, cl, st);
+			string key = "key" + boost::lexical_cast<string>(i);
+			storage::entry e = get_entry(" " + key + " 0 0 5 3", storage::parse_type_set, "VALUE");
+			op.set_entry(e);
+
+			cut_assert_equal_int(0, cl_repl->on_post_proxy_write(&op));
+		}
 
 		// assert
+		assert_queue_size(5);
+		sleep(5);  // waiting for queue proceeded
 		assert_queue_size(0);
+		cut_assert_equal_int(5, h->requests.size());
+		cut_assert_equal_int(5, h->values.size());
+		for (int i = 0; i < 5; i++) {
+			string ext_req = "set key" + boost::lexical_cast<string>(i) + " 0 0 5 3\n";
+			cut_assert_equal_string(ext_req.c_str(), h->requests[i].c_str());
+			cut_assert_equal_string("VALUE\n", h->values[i].c_str());
+		}
 	}
 
-	void test_on_post_proxy_write_with_sync() {
+	void test_on_post_proxy_write_success_with_sync() {
 		// prepare
 		s->listen(port);
 		cluster::node master = cl->set_node("localhost", port, cluster::role_master, cluster::state_active);
@@ -364,16 +430,26 @@ namespace test_cluster_replication {
 		assert_variable("localhost", port, 1, true);
 		assert_state(true, false);
 
-		shared_connection c(new connection_sstream(" key 0 0 5\r\nVALUE\r\n"));
-		mock_op_proxy_write op(c, NULL, NULL);
-		op.parse();
-
-		// execute
 		shared_thread t = tp->get(thread_pool::thread_type_request);
 		handler_async_response* h = new handler_async_response(t, s);
 		t->trigger(h);
-		cut_assert_equal_int(0, cl_repl->on_post_proxy_write(&op));
-		h->stop();
+
+		// execute
+		for (int i = 0; i < 5; i++) {
+			shared_connection c(new connection_sstream("dummy"));
+			mock_op_proxy_write op(c, cl, st);
+			string key = "key" + boost::lexical_cast<string>(i);
+			storage::entry e = get_entry(" " + key + " 0 0 5 3", storage::parse_type_set, "VALUE");
+			op.set_entry(e);
+
+			cut_assert_equal_int(0, cl_repl->on_post_proxy_write(&op));
+			assert_queue_size(0);
+			cut_assert_equal_int(i + 1, h->requests.size());
+			cut_assert_equal_int(i + 1, h->values.size());
+			string ext_req = "set " + key + " 0 0 5 3\n";
+			cut_assert_equal_string(ext_req.c_str(), h->requests[i].c_str());
+			cut_assert_equal_string("VALUE\n", h->values[i].c_str());
+		}
 
 		// assert
 		assert_queue_size(0);

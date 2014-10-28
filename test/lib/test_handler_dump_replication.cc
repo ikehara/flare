@@ -75,7 +75,7 @@ namespace test_handler_dump_replication {
 
 	void prepare_storage(int item_num, int item_size) {
 		for (int i = 0; i < item_num; i++) {
-			string key = string("key") + boost::lexical_cast<string>(i);
+			string key = "key" + boost::lexical_cast<string>(i);
 			ostringstream value;
 			for (int j = 0; j < item_size; j++) {
 				value << "o";
@@ -130,6 +130,46 @@ namespace test_handler_dump_replication {
 			response_dump("STORED");
 		}
 
+		sleep(1);
+		cut_assert_equal_boolean(false, t->is_running());
+		cut_assert_equal_string("", t->get_state().c_str());
+	}
+
+	void test_run_success_wait() {
+		cluster::node master = cl->set_node("localhost", port, cluster::role_master, cluster::state_active);
+		cl->set_partition(0, master);
+		cl->set_reconstruction_interval(1.5 * 1000 * 1000); // 1.5 secs
+		prepare_storage(3, 5); // 1.5 secs * 3 = 4.5 secs
+		shared_thread t = start_handler();
+
+		for (int i = 0; i < 3; i++) {
+			response_dump("STORED");
+		}
+
+		sleep(4);
+		// still under dump replication
+		cut_assert_equal_boolean(true, t->is_running());
+		cut_assert_equal_string("execute", t->get_state().c_str());
+		sleep(1);
+		cut_assert_equal_boolean(false, t->is_running());
+		cut_assert_equal_string("", t->get_state().c_str());
+	}
+
+	void test_run_success_bwlimit() {
+		cluster::node master = cl->set_node("localhost", port, cluster::role_master, cluster::state_active);
+		cl->set_partition(0, master);
+		cl->set_reconstruction_bwlimit(1); // 1 KB
+		prepare_storage(4, 1024); // 4 KB / 1 KB = 4 secs (about)
+		shared_thread t = start_handler();
+
+		for (int i = 0; i < 10; i++) {
+			response_dump("STORED");
+		}
+
+		sleep(3.5);
+		// still under dump replication
+		cut_assert_equal_boolean(true, t->is_running());
+		cut_assert_equal_string("execute", t->get_state().c_str());
 		sleep(1);
 		cut_assert_equal_boolean(false, t->is_running());
 		cut_assert_equal_string("", t->get_state().c_str());

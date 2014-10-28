@@ -99,11 +99,12 @@ int mock_storage::iter_end() {
 	}
 }
 
-void mock_storage::set_helper(const string& key, const string& value, int flag) {
+void mock_storage::set_helper(const string& key, const string& value, int flag, int version) {
 	storage::result result;
 	storage::entry entry;
 	entry.key = key;
 	entry.flag = flag;
+	entry.version = version;
 	entry.size = value.size();
 	entry.data = shared_byte(new uint8_t[entry.size]);
 	memcpy(entry.data.get(), value.data(), entry.size);

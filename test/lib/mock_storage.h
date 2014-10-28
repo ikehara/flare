@@ -49,7 +49,7 @@ public:
 	virtual bool is_capable(capability c) { return false; };
 
 	// Helper functions for test
-	void set_helper(const string& key, const string& value, int flag);
+	void set_helper(const string& key, const string& value, int flag = 0, int version = 0);
 
 protected:
 	virtual int _get_header(string key, entry& e) { return -1; };

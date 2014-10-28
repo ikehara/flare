@@ -26,7 +26,8 @@ handler_dump_replication::handler_dump_replication(shared_thread t, cluster* cl,
 		_cluster(cl),
 		_storage(st),
 		_replication_server_name(server_name),
-		_replication_server_port(server_port) {
+		_replication_server_port(server_port),
+		_total_written(0) {
 	this->_prior_tv.tv_sec = 0;
 	this->_prior_tv.tv_usec = 0;
 }
@@ -112,7 +113,7 @@ int handler_dump_replication::run() {
 		// wait
 		long elapsed_usec = 0;
 		if (bwlimit > 0) {
-			elapsed_usec = this->_sleep_for_bwlimit(e.key.size(), bwlimit);
+			elapsed_usec = this->_sleep_for_bwlimit(e.size, bwlimit);
 		}
 		if (wait > 0 && wait-elapsed_usec > 0) {
 			log_debug("wait for %d usec", wait);

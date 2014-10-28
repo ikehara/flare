@@ -29,8 +29,8 @@ protected:
 	storage*									_storage;
 	const string							_replication_server_name;
 	const int									_replication_server_port;
-	shared_connection					_connection;
 	int												_total_written;
+	shared_connection					_connection;
 	struct timeval						_prior_tv;
 
 public:

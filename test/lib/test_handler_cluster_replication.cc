@@ -87,27 +87,59 @@ namespace test_handler_cluster_replication {
 		return t;
 	}
 
-	void replicate(shared_thread t, shared_thread_queue q, string response = "") {
-		q->sync_ref();
+	void replicate(shared_thread t, shared_thread_queue q, string response = "", bool sync = true) {
+		if (sync) {
+			q->sync_ref();
+		}
 		t->enqueue(q);
 		if (response.length() > 0 && cs.size() > 0) {
 			cs[0]->writeline(response.c_str());
 		}
-		q->sync();
+		if (sync) {
+			q->sync();
+		}
 	}
 
-	void test_run_success() {
+	void test_run_success_sync() {
 		shared_thread t = start_handler();
-		storage::entry e = get_entry(" key 0 0 5 3", storage::parse_type_set, "VALUE");
-		shared_queue_forward_query q(new queue_forward_query(e, "set"));
 
-		replicate(t, q, "STORED");
+		for (int i = 0; i < 5; i++) {
+			storage::entry e = get_entry(" key 0 0 5 3", storage::parse_type_set, "VALUE");
+			shared_queue_forward_query q(new queue_forward_query(e, "set"));
+			replicate(t, q, "STORED");  // sync with response
+			cut_assert_equal_int(0, stats_object->get_total_thread_queue());
+			cut_assert_equal_boolean(true, q->is_success());
+			cut_assert_equal_int(op::result_stored, q->get_result());
+		}
 
-		cut_assert_equal_boolean(true, q->is_success());
-		cut_assert_equal_int(op::result_stored, q->get_result());
-		sleep(1);  // waiting for process queue completed
+		sleep(1);  // waiting for all queue proceeded
 		cut_assert_equal_boolean(true, t->is_running());
 		cut_assert_equal_string("wait", t->get_state().c_str());
+	}
+
+	void test_run_success_async() {
+		shared_thread t = start_handler();
+		shared_queue_forward_query queues[5];
+		for (int i = 0; i < 5; i++) {
+			storage::entry e = get_entry(" key 0 0 5 3", storage::parse_type_set, "VALUE");
+			shared_queue_forward_query q(new queue_forward_query(e, "set"));
+			queues[i] = q;
+			replicate(t, q, "", false);  // async without response
+		}
+
+		sleep(1);
+		for (int i = 0; i < 5; i++) {
+			cut_assert_equal_int(4 - i, stats_object->get_total_thread_queue());
+			cs[0]->writeline("STORED");
+			sleep(1);
+			cut_assert_equal_boolean(true, queues[i]->is_success());
+			cut_assert_equal_int(op::result_stored, queues[i]->get_result());
+		}
+
+		sleep(1);
+		cut_assert_equal_boolean(true, t->is_running());
+		cut_assert_equal_string("wait", t->get_state().c_str());
+		cut_assert_equal_int(0, stats_object->get_total_thread_queue());
 	}
 
 	void test_run_shutdown_graceful() {
