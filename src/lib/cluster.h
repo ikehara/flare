@@ -38,7 +38,7 @@ using namespace std;
 namespace gree {
 namespace flare {
 
-typedef shared_ptr<proxy_event_listener> shared_proxy_event_listener;
+typedef boost::shared_ptr<proxy_event_listener> shared_proxy_event_listener;
 
 typedef class op_proxy_write op_proxy_write;
 typedef class op_proxy_read op_proxy_read;

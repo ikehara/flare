@@ -8,13 +8,14 @@
 #ifndef	HANDLER_DUMP_REPLICATION_H
 #define	HANDLER_DUMP_REPLICATION_H
 
+#include <string>
+
 #include "connection.h"
 #include "cluster.h"
 #include "storage.h"
 #include "thread_handler.h"
 
 using namespace std;
-using namespace boost;
 
 namespace gree {
 namespace flare {

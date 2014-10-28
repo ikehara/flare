@@ -8,6 +8,8 @@
 #ifndef MOCK_STORAGE_H
 #define MOCK_STORAGE_H
 
+#include <string>
+
 #include <storage.h>
 
 namespace gree {

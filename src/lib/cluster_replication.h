@@ -8,6 +8,8 @@
 #ifndef	CLUSTER_REPLICATION_H
 #define	CLUSTER_REPLICATION_H
 
+#include <string>
+
 #include <pthread.h>
 
 #include "cluster.h"

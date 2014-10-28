@@ -8,19 +8,22 @@
 #ifndef	QUEUE_FORWARD_QUERY_H
 #define	QUEUE_FORWARD_QUERY_H
 
+#include <string.h>
+
+#include <boost/shared_ptr.hpp>
+
 #include "storage.h"
 #include "thread_queue.h"
 #include "op.h"
 #include "op_proxy_write.h"
 
 using namespace std;
-using namespace boost;
 
 namespace gree {
 namespace flare {
 
 typedef class queue_forward_query queue_forward_query;
-typedef shared_ptr<queue_forward_query> shared_queue_forward_query;
+typedef boost::shared_ptr<queue_forward_query> shared_queue_forward_query;
 
 /**
  *	forwarding query queue class

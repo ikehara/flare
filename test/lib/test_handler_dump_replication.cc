@@ -75,7 +75,7 @@ namespace test_handler_dump_replication {
 
 	void prepare_storage(int item_num, int item_size) {
 		for (int i = 0; i < item_num; i++) {
-			string key = string("key") + lexical_cast<string>(i);
+			string key = string("key") + boost::lexical_cast<string>(i);
 			ostringstream value;
 			for (int j = 0; j < item_size; j++) {
 				value << "o";

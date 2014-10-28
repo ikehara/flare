@@ -87,7 +87,7 @@ int handler_cluster_replication::_process_queue(shared_thread_queue q) {
 	this->_thread->set_state("execute");
 	this->_thread->set_op(q->get_ident());
 
-	shared_queue_forward_query r = dynamic_pointer_cast<queue_forward_query, thread_queue>(q);
+	shared_queue_forward_query r = boost::dynamic_pointer_cast<queue_forward_query, thread_queue>(q);
 	if (r.get()) {
 		return r->run(this->_connection);
 	} else {

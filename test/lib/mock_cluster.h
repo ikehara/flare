@@ -7,6 +7,8 @@
 #ifndef MOCK_CLUSTER_H
 #define MOCK_CLUSTER_H
 
+#include <string>
+
 #include "cluster.h"
 #include "key_resolver_modular.h"
 

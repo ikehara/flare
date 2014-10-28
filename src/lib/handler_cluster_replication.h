@@ -8,13 +8,16 @@
 #ifndef	HANDLER_CLUSTER_REPLICATION_H
 #define	HANDLER_CLUSTER_REPLICATION_H
 
+#include <string>
+
+#include <boost/lexical_cast.hpp>
+
 #include "connection.h"
 #include "cluster.h"
 #include "thread_handler.h"
 #include "thread_queue.h"
 
 using namespace std;
-using namespace boost;
 
 namespace gree {
 namespace flare {
