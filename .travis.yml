@@ -38,6 +38,7 @@ before_install:
 
 before_script:
   - travis_retry ./autogen.sh
+  - export CXXFLAGS=-Wno-overloaded-virtual
   - travis_retry ./configure
 
 script:
