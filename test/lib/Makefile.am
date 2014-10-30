@@ -5,10 +5,6 @@ noinst_LTLIBRARIES =	\
 	test_connection_tcp.la \
 	test_connection_iostream.la \
 	test_handler_proxy.la \
-	test_storage.la \
-	test_storage_entry.la \
-	test_storage_tcb.la \
-	test_storage_tch.la \
 	test_key_resolver_modular.la \
 	test_op.la	\
 	test_op_add.la	\
