@@ -37,8 +37,8 @@ before_install:
   - cabal install flare-tests/
 
 before_script:
-  - travis_retry ./autogen.sh
-  - travis_retry ./configure
+  - ./autogen.sh
+  - LDFLAGS=-no-keep-memory ./configure
   - mv test/run-tests.travis.sh test/run-tests.sh
 
 script:
