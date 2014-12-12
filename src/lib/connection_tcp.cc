@@ -342,7 +342,6 @@ int connection_tcp::read(char** p, int expect_len, bool readline, bool& actual) 
 int connection_tcp::readline(char** p) {
 	int r_len = 0;
 	char* r = NULL;
-	char* r_tmp = NULL;
 	for (;;) {
 		char* tmp = NULL;
 		bool actual;
@@ -356,7 +355,7 @@ int connection_tcp::readline(char** p) {
 		}
 
 		// directly using read buffer (disirable case)
-		if (actual == false && r_len == 0 && tmp[len-1] == '\n') {
+		if (actual == false && r == NULL && tmp[len-1] == '\n') {
 			log_debug("seems that we can use internal buffer directly", 0);
 			r_len = len;
 			if (len > 1 && tmp[len-2] == '\r') {
@@ -377,7 +376,7 @@ int connection_tcp::readline(char** p) {
 				r_len -= 1;
 			}
 			int tmp_len = w-tmp+1;
-			r_tmp = new char[r_len+tmp_len+1];
+			char* r_tmp = new char[r_len+tmp_len+1];
 			if (r) {
 				memcpy(r_tmp, r, r_len);
 				delete[] r;
@@ -395,7 +394,7 @@ int connection_tcp::readline(char** p) {
 			break;
 		} else {
 			// not yet
-			r_tmp = new char[r_len+len];
+			char* r_tmp = new char[r_len+len];
 			if (r) {
 				memcpy(r_tmp, r, r_len);
 				delete[] r;
@@ -431,11 +430,13 @@ int connection_tcp::readsize(int expect_len, char** p) {
 		if (tmp_len < 0) {
 			delete[] data;
 			return tmp_len;
-		} else if (data_len == 0 && tmp_len == expect_len) {
-			log_debug("successfully read %d bytes (desirable)", tmp_len);
-			*p = tmp;
-			return tmp_len;
-		} else if (data == NULL) {
+		}
+		if (data == NULL) {
+			if (tmp_len == expect_len) {
+				log_debug("successfully read %d bytes (desirable)", tmp_len);
+				*p = tmp;
+				return tmp_len;
+			}
 			data = new char[expect_len];
 			data_tmp = data;
 		}
