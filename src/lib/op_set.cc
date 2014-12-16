@@ -1,3 +1,22 @@
+/*
+ * Flare
+ * --------------
+ * Copyright (C) 2008-2014 GREE, Inc.
+ * 
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
 /**
  *	op_set.cc
  *
@@ -78,6 +97,9 @@ int op_set::_parse_text_server_parameters() {
 int op_set::_parse_binary_request(const binary_request_header& header, const char* body) {
 	if (header.get_extras_length() == _binary_request_required_extras_length
 			&& this->_entry.parse(header, body) == 0) {
+		if (this->_entry.version > 0) {
+			this->_behavior |= storage::behavior_cas;
+		}
 		this->_entry.flag = ntohl(*(reinterpret_cast<const uint32_t*>(body)));
 		this->_entry.expire = util::realtime(ntohl(*(reinterpret_cast<const uint32_t*>(body + 4))));
 		shared_byte data(new uint8_t[this->_entry.size]);
@@ -129,7 +151,7 @@ int op_set::_run_server() {
 	}
 	if (r_storage == storage::result_stored
 			|| r_storage == storage::result_touched) {
-		if (this->get_ident() == "cas"){
+		if ((this->_behavior & storage::behavior_cas) || this->get_ident() == "cas"){
 			stats_object->increment_cas_hits();
 		} else if (this->get_ident() == "touch"){
 			stats_object->increment_touch_hits();
@@ -138,7 +160,7 @@ int op_set::_run_server() {
 																							 this->_is_sync(this->_entry.option,
 																															this->_cluster->get_replication_type()));
 	} else {
-		if (this->get_ident() == "cas"){
+		if ((this->_behavior & storage::behavior_cas) || this->get_ident() == "cas"){
 			if (r_storage == storage::result_exists){
 				stats_object->increment_cas_badval();
 			} else if (r_storage == storage::result_not_found) {

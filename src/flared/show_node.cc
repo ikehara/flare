@@ -1,3 +1,22 @@
+/*
+ * Flare
+ * --------------
+ * Copyright (C) 2008-2014 GREE, Inc.
+ * 
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
 /**
  *	show_node.cc
  *	
@@ -55,6 +74,11 @@ vector<string> show_node::lines() {
 	l.PUSH_BACK_STRING_WITH_STREAM("thread_pool_size:       " << ini_option_object().get_thread_pool_size());
 	l.PUSH_BACK_STRING_WITH_STREAM("proxy_prior_netmask:    " << ini_option_object().get_proxy_prior_netmask());
 	l.PUSH_BACK_STRING_WITH_STREAM("max_total_thread_queue: " << ini_option_object().get_max_total_thread_queue());
+	l.PUSH_BACK_STRING_WITH_STREAM("cluster_replication:    " << ini_option_object().is_cluster_replication());
+	l.PUSH_BACK_STRING_WITH_STREAM("cluster_replication_server_name: " << ini_option_object().get_cluster_replication_server_name());
+	l.PUSH_BACK_STRING_WITH_STREAM("cluster_replication_server_port: " << ini_option_object().get_cluster_replication_server_port());
+	l.PUSH_BACK_STRING_WITH_STREAM("cluster_replication_concurrency: " << ini_option_object().get_cluster_replication_concurrency());
+	l.PUSH_BACK_STRING_WITH_STREAM("cluster_replication_sync: " << ini_option_object().get_cluster_replication_sync());
 
 	return l;
 }

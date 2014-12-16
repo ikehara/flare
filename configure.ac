@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.59)
-AC_INIT(flare, 1.1.0)
+AC_INIT(flare, 1.2.0)
 AC_CONFIG_SRCDIR(src/flared/flared.cc)
 AM_INIT_AUTOMAKE
 AC_CONFIG_HEADERS(src/config.h)
@@ -163,6 +163,7 @@ fi
 # And others...
 
 AC_CHECK_FUNC(clock_gettime,[AC_DEFINE([HAVE_CLOCK_GETTIME], [], [have clock_gettime or not])])
+AC_DEFINE([__STDC_FORMAT_MACROS], [1], [enable stdc format macros])
 
 # Debug options
 
