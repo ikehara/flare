@@ -46,3 +46,7 @@ script:
   - make check && sudo make install
   - flare-tests
 
+branches:
+  only:
+    - master
+    - coverity_scan
